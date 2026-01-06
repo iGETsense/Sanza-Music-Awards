@@ -27,6 +27,7 @@ export interface PaymentResult {
 
 const MESOMB_API_BASE = 'https://mesomb.hachther.com/api/v1.1';
 
+
 // Helper: Generate MeSomb Signature
 function generateSignature(
     method: string,
@@ -35,7 +36,8 @@ function generateSignature(
     nonce: string,
     body: string,
     secretKey: string,
-    accessKey: string
+    accessKey: string,
+    contentType?: string
 ): string {
     const canonicalRequest = [
         method,
@@ -50,7 +52,15 @@ function generateSignature(
         .update(canonicalRequest)
         .digest('hex');
 
-    return `HMAC-SHA1 Credential=${accessKey}, SignedHeaders=content-type;host;x-mesomb-date;x-mesomb-nonce, Signature=${signature}`;
+    // Build SignedHeaders dynamically
+    // Always include host, date, nonce
+    const headers = ['host', 'x-mesomb-date', 'x-mesomb-nonce'];
+    if (contentType) {
+        headers.push('content-type');
+    }
+    headers.sort(); // Ensure consistent order (c, h, x...)
+
+    return `HMAC-SHA1 Credential=${accessKey}, SignedHeaders=${headers.join(';')}, Signature=${signature}`;
 }
 
 // Helper: Generic MeSomb Request
@@ -75,6 +85,9 @@ async function mesombRequest(
     const nonce = crypto.randomBytes(16).toString('hex');
     const bodyString = body ? JSON.stringify(body) : '{}';
 
+    // Determine content type
+    const contentType = method !== 'GET' ? 'application/json' : undefined;
+
     const signature = generateSignature(
         method,
         endpoint,
@@ -82,7 +95,8 @@ async function mesombRequest(
         nonce,
         bodyString,
         secretKey,
-        accessKey
+        accessKey,
+        contentType
     );
 
     const url = `${MESOMB_API_BASE}${endpoint}`;
@@ -90,7 +104,8 @@ async function mesombRequest(
     console.log(`[MeSomb] Direct Request: ${method} ${url}`, {
         nonce,
         date,
-        hasBody: !!body
+        hasBody: !!body,
+        contentType
     });
 
     const headers: Record<string, string> = {
@@ -100,9 +115,10 @@ async function mesombRequest(
         'Authorization': signature,
     };
 
-    if (method !== 'GET') {
-        headers['Content-Type'] = 'application/json';
+    if (contentType) {
+        headers['Content-Type'] = contentType;
     }
+
 
     try {
         const response = await fetch(url, {
