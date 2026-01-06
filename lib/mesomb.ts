@@ -53,9 +53,10 @@ function generateSignature(
         .digest('hex');
 
     // Explicitly define SignedHeaders to ensure exact match
-    let signedHeaders = 'host;x-mesomb-date;x-mesomb-nonce';
+    // Removing 'host' as it can cause issues behind proxies (Vercel) if modified
+    let signedHeaders = 'x-mesomb-date;x-mesomb-nonce';
     if (contentType) {
-        signedHeaders = 'content-type;host;x-mesomb-date;x-mesomb-nonce';
+        signedHeaders = 'content-type;x-mesomb-date;x-mesomb-nonce';
     }
 
     return `HMAC-SHA1 Credential=${accessKey}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
@@ -74,6 +75,7 @@ async function mesombRequest(
     const applicationKey = rawAppKey.trim();
     const accessKey = rawAccessKey.trim();
     const secretKey = rawSecretKey.trim();
+
 
     if (!applicationKey || !accessKey || !secretKey) {
         throw new Error('MeSomb credentials missing in .env.local');
