@@ -93,16 +93,21 @@ async function mesombRequest(
         hasBody: !!body
     });
 
+    const headers: Record<string, string> = {
+        'X-MeSomb-Application': applicationKey,
+        'X-MeSomb-Date': date,
+        'X-MeSomb-Nonce': nonce,
+        'Authorization': signature,
+    };
+
+    if (method !== 'GET') {
+        headers['Content-Type'] = 'application/json';
+    }
+
     try {
         const response = await fetch(url, {
             method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-MeSomb-Application': applicationKey,
-                'X-MeSomb-Date': date,
-                'X-MeSomb-Nonce': nonce,
-                'Authorization': signature,
-            },
+            headers,
             body: method !== 'GET' ? bodyString : undefined,
         });
 
