@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { headers } from 'next/headers';
 import ProfileClient from './ProfileClient';
 import { adminDb } from '@/lib/firebaseAdmin';
 
@@ -32,6 +33,11 @@ async function getCategory(categoryId: string) {
 
 export async function generateMetadata({ params }: any): Promise<Metadata> {
     try {
+        const headersList = await headers();
+        const host = headersList.get('host') || 'sanza-music-awards.vercel.app';
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const siteUrl = `${protocol}://${host}`;
+
         const resolvedParams = await params;
         const id = resolvedParams.id;
         const nominee = await getNominee(id);
@@ -48,19 +54,24 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
         const categoryName = category?.title || 'Artiste';
         const artistName = nominee.name;
         const voteCount = nominee.votes || 0;
+        const artistBio = nominee.description || nominee.bio || '';
 
         let imageUrl = nominee.image || nominee.image_url;
         // Make sure image URL is absolute
         if (imageUrl && imageUrl.startsWith('/')) {
-            imageUrl = `https://sanza-music-awards.vercel.app${imageUrl}`;
+            imageUrl = `${siteUrl}${imageUrl}`;
         } else if (!imageUrl) {
-            imageUrl = 'https://sanza-music-awards.vercel.app/og-image.png'; // Fallback
+            imageUrl = `${siteUrl}/og-image.png`; // Fallback
         }
 
         const title = `VOTE POUR ${artistName.toUpperCase()} - Sanza Music Awards`;
-        const description = `Soutenez ${artistName} nommé dans la catégorie "${categoryName}". Actuellement ${voteCount} votes ! Ensemble pour la culture.`;
+        // Include a bit of bio if exists, else generic
+        const baseDescription = `Soutenez ${artistName} (${categoryName}). Actuellement ${voteCount} votes !`;
+        const description = artistBio
+            ? `${baseDescription} ${artistBio.substring(0, 150)}...`
+            : `${baseDescription} Ensemble pour la culture.`;
 
-        console.log(`[Metadata] Generated for ${artistName}`);
+        console.log(`[Metadata] Generated for ${artistName} on host ${host}`);
 
         return {
             title,
@@ -78,7 +89,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
                 ],
                 type: 'website',
                 siteName: 'Sanza Music Awards',
-                url: `https://sanza-music-awards.vercel.app/profile/${id}`,
+                url: `${siteUrl}/profile/${id}`,
             },
             twitter: {
                 card: 'summary_large_image',

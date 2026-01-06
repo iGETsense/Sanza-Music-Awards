@@ -78,11 +78,28 @@ const ProfileClient = ({ initialNominee }: ProfileClientProps) => {
         return initialNominee;
     }, [nominees, nomineeId, initialNominee]);
 
-    const handleShare = () => {
+    const handleShare = async () => {
         const url = new URL(window.location.href);
-        navigator.clipboard.writeText(url.toString());
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
+        const shareData = {
+            title: `VOTE POUR ${nominee.name.toUpperCase()} - Sanza Music Awards`,
+            text: `Soutenez ${nominee.name} aux Sanza Music Awards !`,
+            url: url.toString(),
+        };
+
+        try {
+            if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+            } else {
+                await navigator.clipboard.writeText(url.toString());
+                setIsCopied(true);
+                setTimeout(() => setIsCopied(false), 2000);
+            }
+        } catch (err) {
+            // User cancelled or share failed, fallback
+            await navigator.clipboard.writeText(url.toString());
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        }
     };
 
     if (!nominee) {
