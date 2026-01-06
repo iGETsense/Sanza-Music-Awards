@@ -100,6 +100,7 @@ export const api = {
             body: JSON.stringify(data),
             withAuth: true,
         }),
+        getWithdrawalHistory: () => apiRequest('/admin/withdraw/history', { withAuth: true }),
     },
 };
 

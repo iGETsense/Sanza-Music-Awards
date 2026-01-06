@@ -44,6 +44,7 @@ const AdminPage = () => {
     const [topNominees, setTopNominees] = useState<any[]>([]);
     const [statusFilter, setStatusFilter] = useState('all');
     const [walletBalance, setWalletBalance] = useState<any>(null);
+    const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [withdrawPhone, setWithdrawPhone] = useState('');
@@ -90,16 +91,18 @@ const AdminPage = () => {
 
     const fetchDashboardData = useCallback(async () => {
         try {
-            const [statsData, txData, topData, balanceData] = await Promise.all([
+            const [statsData, txData, topData, balanceData, historyData] = await Promise.all([
                 (api as any).admin.getStats(),
                 (api as any).admin.getTransactions({ limit: 50 }),
                 (api as any).admin.getTopNominees(5),
                 (api as any).admin.getBalance(),
+                (api as any).admin.getWithdrawalHistory(),
             ]);
             setStats(statsData);
             setTransactions(txData.transactions || []);
             setTopNominees(topData || []);
             setWalletBalance(balanceData);
+            setWithdrawHistory(historyData.withdrawals || []);
         } catch (err) {
             console.error('Failed to fetch dashboard data:', err);
             // Fall back to local data
@@ -333,7 +336,7 @@ const AdminPage = () => {
 
             <div className="p-6 space-y-8 relative z-10 max-w-7xl mx-auto">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4" id="stats-grid">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" id="stats-grid">
                     <Card className="p-6 border-none bg-[#1a1a1a] rounded-[2rem] relative overflow-hidden group">
                         <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
                             <Activity size={100} />
@@ -345,35 +348,26 @@ const AdminPage = () => {
                     </Card>
 
                     {/* Live Wallet Balance */}
-                    <Card className="p-6 border-none bg-gradient-to-br from-[#FDB931] to-[#D49E24] rounded-[2rem] relative overflow-hidden group shadow-[0_10px_40px_-10px_rgba(253,185,49,0.5)]">
-                        <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity text-black">
-                            <Wallet size={120} />
+                    <Card className="p-6 border-none bg-[#1a1a1a] rounded-[2rem] relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Wallet size={100} />
                         </div>
                         <div className="relative z-10 flex flex-col h-full justify-between">
                             <div>
-                                <p className="text-[10px] text-black/60 font-black uppercase tracking-widest mb-1">Portefeuille MeSomb</p>
-                                <h2 className="text-3xl font-black tracking-tighter text-black flex items-baseline gap-1">
+                                <p className="text-[10px] text-secondary font-bold uppercase tracking-widest mb-1">Portefeuille</p>
+                                <h2 className="text-3xl font-black tracking-tighter">
                                     {walletBalance ? walletBalance.balance.toLocaleString() : '---'}
-                                    <span className="text-xs">XAF</span>
+                                    <span className="text-xs ml-1">XAF</span>
                                 </h2>
                             </div>
                             <Button
-                                className="mt-4 bg-black text-[#FDB931] border-none rounded-xl py-2 px-4 font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 w-full hover:bg-black/90"
+                                className="mt-4 bg-secondary text-black hover:bg-secondary/90 border-none rounded-xl py-2 px-4 font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 w-full transition-all shadow-[0_10px_20px_-5px_rgba(253,185,49,0.3)]"
                                 onClick={() => setIsWithdrawModalOpen(true)}
                             >
                                 <ArrowDownCircle size={14} />
                                 Retirer des Fonds
                             </Button>
                         </div>
-                    </Card>
-                    <Card className="p-6 border-none bg-[#1a1a1a] rounded-[2rem] relative overflow-hidden group">
-                        <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <DollarSign size={100} />
-                        </div>
-                        <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest mb-2">Revenus (XAF)</p>
-                        <h2 className="text-3xl font-black tracking-tighter">
-                            {stats ? stats.totalRevenue.toLocaleString() : '0'}
-                        </h2>
                     </Card>
                     <Card className="p-6 border-none bg-[#1a1a1a] rounded-[2rem] relative overflow-hidden group">
                         <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -488,6 +482,44 @@ const AdminPage = () => {
                     </div>
                 </div>
 
+                {/* Withdrawal History Section */}
+                <div id="withdraw-history" className="mt-12">
+                    <h3 className="text-sm font-black tracking-tight mb-6 flex items-center gap-2">
+                        <ArrowDownCircle size={16} className="text-secondary" />
+                        Historique des Retraits ({withdrawHistory.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {withdrawHistory.length === 0 ? (
+                            <div className="col-span-full p-12 text-center bg-[#1a1a1a] rounded-[2rem] border border-white/5">
+                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Aucun historique de retrait</p>
+                            </div>
+                        ) : (
+                            withdrawHistory.slice(0, 6).map((item) => (
+                                <div key={item.id} className="p-5 bg-[#1a1a1a] rounded-[2rem] border border-white/5 group hover:border-secondary/30 transition-all text-left">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${item.status === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                            {item.status}
+                                        </div>
+                                        <span className="text-[9px] text-gray-500 font-bold">
+                                            {new Date(item.createdAt).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{item.service}</p>
+                                            <p className="text-sm font-black truncate">{item.receiver}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-lg font-black text-white">-{item.amount.toLocaleString()}</p>
+                                            <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">XAF</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
                 {/* Top Nominees */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div id="top-nominees">
@@ -540,94 +572,95 @@ const AdminPage = () => {
                         </div>
                     </div>
                 </div>
+
+                <AdminGuideBook isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
+
+                {/* Withdrawal Modal */}
+                {isWithdrawModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                            onClick={() => setIsWithdrawModalOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            className="relative w-full max-w-md bg-[#1a1a1a] border border-white/5 rounded-[2.5rem] p-8 shadow-2xl"
+                        >
+                            <div className="text-center mb-8">
+                                <div className="w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20 mx-auto mb-4">
+                                    <ArrowDownCircle className="text-secondary" size={32} />
+                                </div>
+                                <h2 className="text-2xl font-black tracking-tight mb-2">Retrait de Fonds</h2>
+                                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Transférez vos revenus vers Mobile Money</p>
+                            </div>
+
+                            <form onSubmit={handleWithdraw} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setWithdrawService('MTN')}
+                                        className={`py-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${withdrawService === 'MTN' ? 'bg-secondary/20 border-secondary text-secondary' : 'bg-white/5 border-white/10 text-gray-500'}`}
+                                    >
+                                        <span className="font-black text-xs uppercase tracking-widest">MTN MOMO</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setWithdrawService('ORANGE')}
+                                        className={`py-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${withdrawService === 'ORANGE' ? 'bg-secondary/20 border-secondary text-secondary' : 'bg-white/5 border-white/10 text-gray-500'}`}
+                                    >
+                                        <span className="font-black text-xs uppercase tracking-widest">Orange Money</span>
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest ml-4 mb-2 block">Numéro de téléphone</label>
+                                        <input
+                                            type="tel"
+                                            placeholder="6XXXXXXXX"
+                                            value={withdrawPhone}
+                                            onChange={(e) => setWithdrawPhone(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-secondary transition-colors font-bold text-sm"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest ml-4 mb-2 block">Montant (XAF)</label>
+                                        <input
+                                            type="number"
+                                            placeholder="Ex: 5000"
+                                            value={withdrawAmount}
+                                            onChange={(e) => setWithdrawAmount(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-secondary transition-colors font-bold text-sm"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="pt-4">
+                                    <Button
+                                        type="submit"
+                                        className="w-full py-4 rounded-2xl font-black uppercase tracking-widest"
+                                        disabled={isWithdrawing || !withdrawAmount || !withdrawPhone}
+                                    >
+                                        {isWithdrawing ? 'Traitement...' : 'Confirmer le Retrait'}
+                                    </Button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsWithdrawModalOpen(false)}
+                                        className="w-full mt-2 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+                                    >
+                                        Annuler
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
             </div>
-            <AdminGuideBook isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
-
-            {/* Withdrawal Modal */}
-            {isWithdrawModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                        onClick={() => setIsWithdrawModalOpen(false)}
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        className="relative w-full max-w-md bg-[#1a1a1a] border border-white/5 rounded-[2.5rem] p-8 shadow-2xl"
-                    >
-                        <div className="text-center mb-8">
-                            <div className="w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20 mx-auto mb-4">
-                                <ArrowDownCircle className="text-secondary" size={32} />
-                            </div>
-                            <h2 className="text-2xl font-black tracking-tight mb-2">Retrait de Fonds</h2>
-                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Transférez vos revenus vers Mobile Money</p>
-                        </div>
-
-                        <form onSubmit={handleWithdraw} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setWithdrawService('MTN')}
-                                    className={`py-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${withdrawService === 'MTN' ? 'bg-secondary/20 border-secondary text-secondary' : 'bg-white/5 border-white/10 text-gray-500'}`}
-                                >
-                                    <span className="font-black text-xs uppercase tracking-widest">MTN MOMO</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setWithdrawService('ORANGE')}
-                                    className={`py-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${withdrawService === 'ORANGE' ? 'bg-secondary/20 border-secondary text-secondary' : 'bg-white/5 border-white/10 text-gray-500'}`}
-                                >
-                                    <span className="font-black text-xs uppercase tracking-widest">Orange Money</span>
-                                </button>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest ml-4 mb-2 block">Numéro de téléphone</label>
-                                    <input
-                                        type="tel"
-                                        placeholder="6XXXXXXXX"
-                                        value={withdrawPhone}
-                                        onChange={(e) => setWithdrawPhone(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-secondary transition-colors font-bold text-sm"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest ml-4 mb-2 block">Montant (XAF)</label>
-                                    <input
-                                        type="number"
-                                        placeholder="Ex: 5000"
-                                        value={withdrawAmount}
-                                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-secondary transition-colors font-bold text-sm"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="pt-4">
-                                <Button
-                                    type="submit"
-                                    className="w-full py-4 rounded-2xl font-black uppercase tracking-widest"
-                                    disabled={isWithdrawing || !withdrawAmount || !withdrawPhone}
-                                >
-                                    {isWithdrawing ? 'Traitement...' : 'Confirmer le Retrait'}
-                                </Button>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsWithdrawModalOpen(false)}
-                                    className="w-full mt-2 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
-                                >
-                                    Annuler
-                                </button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </div>
-            )}
         </div>
     );
 };
