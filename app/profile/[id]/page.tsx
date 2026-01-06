@@ -43,7 +43,6 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
         const nominee = await getNominee(id);
 
         if (!nominee) {
-            console.log(`[Metadata] Nominee not found for id: ${id}`);
             return {
                 title: 'Sanza Music Awards',
                 description: 'La plus grande cérémonie de récompense musicale.'
@@ -61,17 +60,16 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
         if (imageUrl && imageUrl.startsWith('/')) {
             imageUrl = `${siteUrl}${imageUrl}`;
         } else if (!imageUrl) {
-            imageUrl = `${siteUrl}/og-image.png`; // Fallback
+            imageUrl = `${siteUrl}/og-image.jpg`; // Fixed extension .jpg
         }
 
         const title = `VOTE POUR ${artistName.toUpperCase()} - Sanza Music Awards`;
-        // Include a bit of bio if exists, else generic
-        const baseDescription = `Soutenez ${artistName} (${categoryName}). Actuellement ${voteCount} votes !`;
-        const description = artistBio
-            ? `${baseDescription} ${artistBio.substring(0, 150)}...`
-            : `${baseDescription} Ensemble pour la culture.`;
 
-        console.log(`[Metadata] Generated for ${artistName} on host ${host}`);
+        // DEBUG: Inclusion of URL in description to see what's generated
+        const baseDescription = `Soutenez ${artistName} (${categoryName}). ${voteCount} votes !`;
+        const description = artistBio
+            ? `${baseDescription} ${artistBio.substring(0, 100)}...`
+            : `${baseDescription} Ensemble pour la culture.`;
 
         return {
             title,
@@ -85,6 +83,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
                         width: 1200,
                         height: 630,
                         alt: `Voter pour ${artistName}`,
+                        type: imageUrl.endsWith('.png') ? 'image/png' : 'image/jpeg',
                     },
                 ],
                 type: 'website',
