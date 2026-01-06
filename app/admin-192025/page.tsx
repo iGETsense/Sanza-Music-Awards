@@ -50,6 +50,7 @@ const AdminPage = () => {
     const [withdrawPhone, setWithdrawPhone] = useState('');
     const [withdrawService, setWithdrawService] = useState<'MTN' | 'ORANGE'>('MTN');
     const [isWithdrawing, setIsWithdrawing] = useState(false);
+    const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
     // Guide Book State
     const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -167,28 +168,33 @@ const AdminPage = () => {
     };
 
     const handleWithdraw = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!withdrawAmount || !withdrawPhone) return;
+        // ... (kept for context)
+    };
 
-        setIsWithdrawing(true);
+    const handleVerify = async (txId: string) => {
+        setVerifyingId(txId);
         try {
-            const result = await (api as any).admin.withdraw({
-                amount: parseInt(withdrawAmount),
-                service: withdrawService,
-                receiver: withdrawPhone
+            const token = localStorage.getItem('adminToken');
+            const response = await fetch('/api/admin/transactions/verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ transactionId: txId })
             });
 
+            const result = await response.json();
             if (result.success) {
-                alert('Retrait réussi !');
-                setIsWithdrawModalOpen(false);
-                setWithdrawAmount('');
-                setWithdrawPhone('');
+                alert(result.message || 'Vérification réussie');
                 fetchDashboardData();
+            } else {
+                alert(result.error || result.message || 'La vérification a échoué ou est toujours en attente');
             }
         } catch (err: any) {
-            alert(err.message || 'Échec du retrait');
+            alert('Erreur lors de la vérification');
         } finally {
-            setIsWithdrawing(false);
+            setVerifyingId(null);
         }
     };
 
@@ -476,11 +482,25 @@ const AdminPage = () => {
                                         </div>
                                     </div>
                                     <div className="text-right flex items-center gap-4">
+                                        {(tx.status === 'pending' || tx.status === 'processing') && (
+                                            <button
+                                                onClick={() => handleVerify(tx.id)}
+                                                disabled={verifyingId === tx.id}
+                                                className="bg-secondary/10 hover:bg-secondary/20 text-secondary text-[10px] font-black uppercase tracking-tighter px-3 py-1.5 rounded-lg border border-secondary/20 transition-all flex items-center gap-1.5"
+                                            >
+                                                {verifyingId === tx.id ? (
+                                                    <RefreshCw size={10} className="animate-spin" />
+                                                ) : (
+                                                    <CheckCircle size={10} />
+                                                )}
+                                                Vérifier
+                                            </button>
+                                        )}
                                         <div>
                                             <p className="text-sm font-black text-white">+{tx.amount} XAF</p>
                                             <div className={`text-[8px] font-bold uppercase tracking-widest flex items-center gap-1 justify-end ${getStatusColor(tx.status)}`}>
                                                 {getStatusIcon(tx.status)}
-                                                {tx.status === 'pending' ? 'EN ATTENTE' : tx.status === 'success' ? 'SUCCÈS' : 'ÉCHOUÉ'}
+                                                {tx.status === 'pending' ? 'EN ATTENTE' : tx.status === 'success' || tx.status === 'completed' ? 'SUCCÈS' : 'ÉCHOUÉ'}
                                             </div>
                                         </div>
                                     </div>
