@@ -26,47 +26,114 @@ export interface PaymentResult {
 }
 
 const MESOMB_API_BASE = 'https://mesomb.hachther.com/api/v1.1';
+const ALGORITHM = 'HMAC-SHA1';
 
+// Helper: SHA1 Hash
+function sha1(content: string): string {
+    return crypto.createHash('sha1').update(content).digest('hex');
+}
 
-// Helper: Generate MeSomb Signature
-function generateSignature(
+// Helper: Custom URL Parsing to match SDK 'url-parse' behavior roughly
+// SDK: protocol + '//' + host e.g. 'https://mesomb.hachther.com'
+function getSdkHost(urlStr: string): string {
+    try {
+        const url = new URL(urlStr);
+        // SDK headers.host: parse.protocol + '//' + parse.host
+        // URL.protocol includes ':'
+        return `${url.protocol}//${url.host}`;
+    } catch (e) {
+        return 'https://mesomb.hachther.com';
+    }
+}
+
+// Helper: Generate MeSomb Signature (SDK Replica)
+function signRequest(
+    service: string,
     method: string,
-    endpoint: string,
-    date: string,
+    urlStr: string,
+    date: Date,
     nonce: string,
-    body: string,
-    secretKey: string,
-    accessKey: string,
-    contentType?: string
+    body: any,
+    credentials: { accessKey: string; secretKey: string }
 ): string {
-    const canonicalRequest = [
-        method,
-        endpoint,
-        date,
-        nonce,
-        body
-    ].join('\n');
+    const timestamp = date.getTime();
+    const url = new URL(urlStr);
 
-    const signature = crypto
-        .createHmac('sha1', secretKey)
-        .update(canonicalRequest)
-        .digest('hex');
+    // 1. Headers
+    const headers: Record<string, string> = {};
+    headers['host'] = getSdkHost(urlStr);
+    headers['x-mesomb-date'] = String(timestamp);
+    headers['x-mesomb-nonce'] = nonce;
 
-    // Explicitly define SignedHeaders to ensure exact match
-    // Removing 'host' as it can cause issues behind proxies (Vercel) if modified
-    let signedHeaders = 'x-mesomb-date;x-mesomb-nonce';
-    if (contentType) {
-        signedHeaders = 'content-type;x-mesomb-date;x-mesomb-nonce';
+    if (method !== 'GET' || body) {
+        headers['content-type'] = 'application/json';
     }
 
-    return `HMAC-SHA1 Credential=${accessKey}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+    // Sort headers
+    const headersKeys = Object.keys(headers).sort();
+
+    // Canonical Headers
+    const canonicalHeaders = headersKeys.map(key => `${key}:${headers[key]}`).join('\n');
+
+    // Signed Headers
+    const signedHeaders = headersKeys.join(';');
+
+    // Payload Hash
+    // SDK: CryptoJS.SHA1(body ? JSON.stringify(body) : '{}').toString()
+    const payloadContent = body ? JSON.stringify(body) : '{}';
+    const payloadHash = sha1(payloadContent);
+
+    // Path
+    // SDK: encodeURI(parse.pathname)
+    const path = encodeURI(url.pathname);
+
+    // Canonical Query (Assuming empty for now as our requests don't used fancy queries yet)
+    // SDK handles query parsing, but we construct URLs manually.
+    // For /payment/transactions/?ids=... query is part of URL.
+    let canonicalQuery = '';
+    if (url.search) {
+        canonicalQuery = url.search.substring(1);
+        // SDK: if (parse.query) canonicalQuery = parse.query.substring(1);
+    }
+
+    // Canonical Request
+    const canonicalRequest = [
+        method,
+        path,
+        canonicalQuery,
+        canonicalHeaders,
+        signedHeaders,
+        payloadHash
+    ].join('\n');
+
+    // Scope
+    // SDK: date.getFullYear() + date.getMonth() + date.getDate() + '/' + service + '/mesomb_request'
+    // Note: date.getMonth() is 0-indexed.
+    const scope = `${date.getFullYear()}${date.getMonth()}${date.getDate()}/${service}/mesomb_request`;
+
+    // String to Sign
+    const stringToSign = [
+        ALGORITHM,
+        timestamp,
+        scope,
+        sha1(canonicalRequest)
+    ].join('\n');
+
+    // Signature
+    const signature = crypto
+        .createHmac('sha1', credentials.secretKey)
+        .update(stringToSign)
+        .digest('hex');
+
+    return `${ALGORITHM} Credential=${credentials.accessKey}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 }
 
 // Helper: Generic MeSomb Request
 async function mesombRequest(
     endpoint: string,
     method: string,
-    body: any = null
+    body: any = null,
+    service: string = 'payment' // Default to 'payment' as per SDK logic
 ): Promise<any> {
     const rawAppKey = process.env.MESOMB_APPLICATION_KEY || '';
     const rawAccessKey = process.env.MESOMB_ACCESS_KEY || '';
@@ -76,65 +143,53 @@ async function mesombRequest(
     const accessKey = rawAccessKey.trim();
     const secretKey = rawSecretKey.trim();
 
-
     if (!applicationKey || !accessKey || !secretKey) {
         throw new Error('MeSomb credentials missing in .env.local');
     }
 
-    const date = new Date().toISOString();
+    const date = new Date(); // Use current date object
     const nonce = crypto.randomBytes(16).toString('hex');
-
-    // Determine content type and body
-    let bodyString = '';
-    let contentType: string | undefined = undefined;
-
-    if (method !== 'GET') {
-        contentType = 'application/json';
-        bodyString = body ? JSON.stringify(body) : '{}';
-    } else {
-        // For GET, standard is empty body.
-        // NBDance used '{}' but sending body in GET is risky (502s).
-        bodyString = '';
-    }
-
-    const signature = generateSignature(
-        method,
-        endpoint,
-        date,
-        nonce,
-        bodyString,
-        secretKey,
-        accessKey,
-        contentType
-    );
-
     const url = `${MESOMB_API_BASE}${endpoint}`;
 
-    console.log(`[MeSomb] Direct Request: ${method} ${url}`, {
-        nonce,
+    // Generate V4 Signature
+    const validBody = (method === 'GET' && !body) ? null : (body || {}); // Ensure body matches logic
+    // SDK passes body || {} to signRequest
+
+    const signature = signRequest(
+        service,
+        method,
+        url,
         date,
-        hasBody: !!bodyString,
-        contentType,
-        authHeaderLength: signature.length
+        nonce,
+        validBody,
+        { accessKey, secretKey }
+    );
+
+    console.log(`[MeSomb] Direct Request V4: ${method} ${url}`, {
+        nonce,
+        date: date.toISOString(),
+        hasBody: !!validBody
     });
 
     const headers: Record<string, string> = {
-        'X-MeSomb-Application': applicationKey,
-        'X-MeSomb-Date': date,
-        'X-MeSomb-Nonce': nonce,
+        'x-mesomb-date': String(date.getTime()),
+        'x-mesomb-nonce': nonce,
         'Authorization': signature,
+        'X-MeSomb-Application': applicationKey,
+        'X-MeSomb-Source': 'MeSombJS/v1.1.0', // Emulate SDK source
     };
 
-    if (contentType) {
-        headers['Content-Type'] = contentType;
+    if (method !== 'GET') {
+        headers['Content-Type'] = 'application/json';
     }
 
+    const bodyString = validBody ? JSON.stringify(validBody) : undefined;
 
     try {
         const response = await fetch(url, {
             method,
             headers,
-            body: method !== 'GET' ? bodyString : undefined,
+            body: bodyString,
         });
 
         if (!response.ok) {
