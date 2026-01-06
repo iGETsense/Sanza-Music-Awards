@@ -122,7 +122,10 @@ export async function collectPayment(params: CollectPaymentParams): Promise<Paym
             message: 'Payment initiated. Please confirm on your phone.',
         };
     } catch (error: any) {
-        console.error('[MeSomb] collectPayment Error:', error.message);
+        console.error('[MeSomb] collectPayment Error:', error.message, {
+            cause: error.cause,
+            stack: error.stack
+        });
         return {
             success: false,
             status: 'FAILED',
@@ -151,7 +154,10 @@ export async function checkPaymentStatus(reference: string): Promise<PaymentResu
             transactionId: transaction.pk
         };
     } catch (error: any) {
-        console.error('[MeSomb] Status check error:', error);
+        console.error('[MeSomb] Status check error:', error.message, {
+            cause: error.cause,
+            stack: error.stack
+        });
         return { success: false, status: 'PENDING' };
     }
 }
@@ -202,7 +208,10 @@ export async function makeWithdrawal(params: { amount: number, service: 'MTN' | 
             message: 'Withdrawal completed successfully.',
         };
     } catch (error: any) {
-        console.error('[MeSomb] makeWithdrawal Error:', error.message);
+        console.error('[MeSomb] makeWithdrawal Error:', error.message, {
+            cause: error.cause,
+            stack: error.stack
+        });
         return {
             success: false,
             status: 'FAILED',
@@ -238,7 +247,10 @@ export async function getAccountBalance(): Promise<{ success: boolean; balance?:
             ]
         };
     } catch (error: any) {
-        console.error('[MeSomb] Balance fetch error:', error);
+        console.error('[MeSomb] Balance fetch error:', error.message, {
+            cause: error.cause,
+            stack: error.stack
+        });
         return {
             success: false,
             error: error.message,

@@ -9,6 +9,7 @@ const nextConfig = {
             },
         ],
     },
+    serverExternalPackages: ['@hachther/mesomb'],
 };
 
 export default nextConfig;
