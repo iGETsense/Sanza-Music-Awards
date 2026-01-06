@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
             console.log(`[Payment] Result for ${transactionId}:`, paymentResult);
 
             if (!paymentResult.success) {
+                console.error(`[Payment] Failed for ${operator}:`, paymentResult);
                 if (adminDb) {
                     await adminDb.ref(`transactions/${transactionId}`).update({
                         status: 'failed',
@@ -73,7 +74,11 @@ export async function POST(request: NextRequest) {
                         failedAt: Date.now()
                     });
                 }
-                return NextResponse.json({ success: false, error: paymentResult.error }, { status: 400 });
+                return NextResponse.json({
+                    success: false,
+                    error: paymentResult.error,
+                    operator: operator
+                }, { status: 400 });
             }
 
             // 4. Update Transaction Status to Pending

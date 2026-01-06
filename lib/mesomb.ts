@@ -242,18 +242,18 @@ export async function collectPayment(params: CollectPaymentParams): Promise<Paym
             fees: true,
             mode: 'asynchronous', // Async is safer
             customer: {
-                email: 'vote@sanzamusicaward.com',
-                first_name: 'Voter',
-                last_name: 'Sanza',
+                email: 'vote@african-singing-awards.com',
+                first_name: 'African Singing',
+                last_name: 'Awards',
                 town: 'Douala',
                 region: 'Littoral',
                 country: 'CM',
             },
             products: [
                 {
-                    name: 'Vote Sanza Music Award',
+                    name: 'VOTE SANZA MUSIC AWARDS',
                     category: 'Voting',
-                    quantity: Math.floor(params.amount / 105),
+                    quantity: 1,
                     amount: params.amount,
                 },
             ],

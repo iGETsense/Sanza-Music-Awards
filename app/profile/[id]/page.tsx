@@ -36,6 +36,8 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
         const headersList = await headers();
         const host = headersList.get('host') || 'sanza-music-awards.vercel.app';
         const protocol = host.includes('localhost') ? 'http' : 'https';
+
+        // Standardize siteUrl to avoid issues with different vercel domains
         const siteUrl = `${protocol}://${host}`;
 
         const resolvedParams = await params;
@@ -55,20 +57,19 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
         const voteCount = nominee.votes || 0;
         const artistBio = nominee.description || nominee.bio || '';
 
+        // Resolve candidate image - Absolute URL is REQUIRED for OG tags
         let imageUrl = nominee.image || nominee.image_url;
-        // Make sure image URL is absolute
         if (imageUrl && imageUrl.startsWith('/')) {
             imageUrl = `${siteUrl}${imageUrl}`;
-        } else if (!imageUrl) {
-            imageUrl = `${siteUrl}/og-image.jpg`; // Fixed extension .jpg
+        } else if (!imageUrl || imageUrl.includes('cat-artist.png')) {
+            // Use a specific high-quality og-image if no custom photo
+            imageUrl = `${siteUrl}/og-image.jpg`;
         }
 
         const title = `VOTE POUR ${artistName.toUpperCase()} - Sanza Music Awards`;
-
-        // DEBUG: Inclusion of URL in description to see what's generated
         const baseDescription = `Soutenez ${artistName} (${categoryName}). ${voteCount} votes !`;
         const description = artistBio
-            ? `${baseDescription} ${artistBio.substring(0, 100)}...`
+            ? `${baseDescription} ${artistBio.substring(0, 150)}...`
             : `${baseDescription} Ensemble pour la culture.`;
 
         return {
