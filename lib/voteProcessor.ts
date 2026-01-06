@@ -8,6 +8,7 @@ interface TransactionInfo {
     id: string;
     nomineeId: string;
     voteCount: number;
+    amount?: number;
 }
 
 interface ProcessResult {
@@ -86,6 +87,19 @@ export async function processSuccessfulPayment(
         await transactionRef.update({
             votesProcessed: true,
             votesAddedAt: Date.now(),
+        });
+
+        // UPDATE GLOBAL STATS
+        const statsRef = database.ref('stats');
+        await statsRef.transaction((currentStats) => {
+            if (!currentStats) return currentStats;
+            return {
+                ...currentStats,
+                totalVotes: (currentStats.totalVotes || 0) + voteCount,
+                totalRevenue: (currentStats.totalRevenue || 0) + (transaction.amount || 0),
+                successfulTransactions: (currentStats.successfulTransactions || 0) + 1,
+                totalTransactions: (currentStats.totalTransactions || 0) + 1,
+            };
         });
 
         return {

@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
             const processResult = await processSuccessfulPayment({
                 id: transactionId,
                 nomineeId: transaction.nomineeId,
-                voteCount: transaction.voteCount
+                voteCount: transaction.voteCount,
+                amount: transaction.amount
             }, 'SUCCESS_VERIFY');
 
             if (processResult.success) {
