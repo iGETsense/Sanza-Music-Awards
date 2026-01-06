@@ -14,14 +14,25 @@ export function getMesombClient() {
     const accessKey = process.env.MESOMB_ACCESS_KEY;
     const secretKey = process.env.MESOMB_SECRET_KEY;
 
-    console.log('[MeSomb] Initializing with keys:', {
-        applicationKey: applicationKey ? `${applicationKey.substring(0, 5)}...` : 'MISSING',
-        accessKey: accessKey ? `${accessKey.substring(0, 5)}...` : 'MISSING',
-        secretKey: secretKey ? `${secretKey.substring(0, 5)}...` : 'MISSING',
+    // Enhanced debug logging (safe)
+    console.log('[MeSomb] Initialization check:', {
+        hasAppKey: !!applicationKey,
+        appKeyLen: applicationKey?.length,
+        hasAccessKey: !!accessKey,
+        accessKeyLen: accessKey?.length,
+        hasSecretKey: !!secretKey,
+        secretKeyLen: secretKey?.length,
     });
 
     if (!applicationKey || !accessKey || !secretKey) {
-        throw new Error('MeSomb credentials missing');
+        throw new Error('MeSomb credentials missing in .env.local');
+    }
+
+    // Basic format validation to catch common copy-paste errors
+    if (applicationKey.length < 30 || !accessKey.includes('-')) {
+        console.warn('[MeSomb] WARNING: Credentials format might be invalid.');
+        console.warn(' - Application Key should be a ~40 char hex string');
+        console.warn(' - Access/Secret Keys should be UUIDs (with hyphens)');
     }
 
     return new PaymentOperation({
