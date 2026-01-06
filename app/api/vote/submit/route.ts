@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { nomineeId, voteCount, phoneNumber, paymentMethod } = body;
+        const { nomineeId, voteCount, phoneNumber, paymentMethod, nomineeName } = body;
 
         // 1. Validation
         if (!nomineeId || !voteCount || !phoneNumber) {
@@ -35,8 +35,10 @@ export async function POST(request: NextRequest) {
         const initialTransactionData = {
             id: transactionId,
             nomineeId,
+            nominee_name: nomineeName || 'Unknown', // Store name for display
             voteCount: parseInt(voteCount),
             phoneNumber: cleanPhone,
+            payer: cleanPhone, // Explicit display field
             paymentMethod: serviceCode,
             operator: serviceCode,
             amount,

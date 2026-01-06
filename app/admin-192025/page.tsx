@@ -463,8 +463,13 @@ const AdminPage = () => {
                                         <div>
                                             <h4 className="text-sm font-bold">{tx.nominee_name || 'Unknown'}</h4>
                                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                                                {new Date(tx.created_at || tx.timestamp).toLocaleTimeString()} • {tx.votes_count || tx.votes} Votes
+                                                {new Date(tx.created_at || tx.timestamp || tx.createdAt || Date.now()).toLocaleTimeString()} • {tx.payer || tx.phoneNumber || 'Unknown'}
                                             </p>
+                                            {tx.status === 'failed' && (
+                                                <p className="text-[9px] text-red-500 font-bold mt-1 max-w-[200px] truncate">
+                                                    {tx.error || tx.error_message || 'Erreur inconnue'}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="text-right flex items-center gap-4">
@@ -472,7 +477,7 @@ const AdminPage = () => {
                                             <p className="text-sm font-black text-white">+{tx.amount} XAF</p>
                                             <div className={`text-[8px] font-bold uppercase tracking-widest flex items-center gap-1 justify-end ${getStatusColor(tx.status)}`}>
                                                 {getStatusIcon(tx.status)}
-                                                {tx.status}
+                                                {tx.status === 'pending' ? 'EN ATTENTE' : tx.status === 'success' ? 'SUCCÈS' : 'ÉCHOUÉ'}
                                             </div>
                                         </div>
                                     </div>

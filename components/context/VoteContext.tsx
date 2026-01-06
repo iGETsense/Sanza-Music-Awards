@@ -37,7 +37,7 @@ interface VoteContextType {
     error: string | null;
     useBackend: boolean;
     incrementVote: (nomineeId: string | number, count?: number, amount?: number, method?: string) => void;
-    processVote: (nomineeId: string | number, count: number, phoneNumber: string, paymentMethod: string) => Promise<any>;
+    processVote: (nomineeId: string | number, count: number, phoneNumber: string, paymentMethod: string, nomineeName: string) => Promise<any>;
     refetch: () => Promise<void>;
     getGlobalRankings: () => Nominee[];
     getCategoryRankings: (categoryId: string | number) => Nominee[];
@@ -124,10 +124,11 @@ export const VoteProvider = ({ children }: { children: ReactNode }) => {
         fetchData();
     }, [fetchData]);
 
-    const processVote = useCallback(async (nomineeId: string | number, count: number, phoneNumber: string, paymentMethod: string) => {
+    const processVote = useCallback(async (nomineeId: string | number, count: number, phoneNumber: string, paymentMethod: string, nomineeName: string) => {
         try {
             const result = await (api as any).initiatePayment({
                 nomineeId,
+                nomineeName,
                 voteCount: count,
                 phoneNumber,
                 paymentMethod,

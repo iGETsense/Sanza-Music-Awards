@@ -150,7 +150,7 @@ const VoteModal = ({ isOpen, onClose, nominee }: VoteModalProps) => {
 
         try {
             if (useBackend && processVote) {
-                const result = await processVote(nominee.id, currentVoteCount, phoneNumber, paymentMethod);
+                const result = await processVote(nominee.id, currentVoteCount, phoneNumber, paymentMethod, nominee.name);
 
                 if (result.success) {
                     setIsLoading(false);

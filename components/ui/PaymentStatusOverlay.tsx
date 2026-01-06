@@ -58,7 +58,7 @@ const PaymentStatusOverlay = ({ status, message, onClose }: PaymentStatusOverlay
                         <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            type="spring"
+                            transition={{ type: "spring" }}
                         >
                             <CheckCircle2 size={64} className="text-green-500" />
                         </motion.div>
@@ -68,7 +68,7 @@ const PaymentStatusOverlay = ({ status, message, onClose }: PaymentStatusOverlay
                         <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            type="spring"
+                            transition={{ type: "spring" }}
                         >
                             <XCircle size={64} className="text-red-500" />
                         </motion.div>
