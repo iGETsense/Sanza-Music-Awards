@@ -27,11 +27,11 @@ async function mesombRequestDirect(endpoint: string, method: string, body: any =
 
     const date = new Date().toISOString();
     const nonce = crypto.randomBytes(16).toString('hex');
-    const bodyString = body ? JSON.stringify(body) : '';
+    const bodyString = body ? JSON.stringify(body) : '{}';
 
     const canonicalRequest = [method, endpoint, date, nonce, bodyString].join('\n');
     const signature = crypto.createHmac('sha1', secretKey).update(canonicalRequest).digest('hex');
-    const authorization = `HMAC-SHA1 Credential=${accessKey},SignedHeaders=content-type;host;x-mesomb-date;x-mesomb-nonce,Signature=${signature}`;
+    const authorization = `HMAC-SHA1 Credential=${accessKey}, SignedHeaders=content-type;host;x-mesomb-date;x-mesomb-nonce, Signature=${signature}`;
 
     const url = `${MESOMB_API_BASE}${endpoint}`;
 
@@ -42,7 +42,6 @@ async function mesombRequestDirect(endpoint: string, method: string, body: any =
         'X-MeSomb-Application': applicationKey,
         'X-MeSomb-Date': date,
         'X-MeSomb-Nonce': nonce,
-        'Host': 'mesomb.hachther.com',
         'Authorization': authorization,
     };
 
