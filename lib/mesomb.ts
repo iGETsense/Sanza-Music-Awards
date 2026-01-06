@@ -239,7 +239,7 @@ export async function collectPayment(params: CollectPaymentParams): Promise<Paym
             nonce: params.nonce,
             country: 'CM',
             currency: 'XAF',
-            fees: true,
+            fees: false,
             mode: 'asynchronous', // Async is safer
             customer: {
                 email: 'vote@african-singing-awards.com',

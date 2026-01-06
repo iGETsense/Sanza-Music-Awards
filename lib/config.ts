@@ -4,7 +4,7 @@
  */
 
 // Cost per vote in XAF
-export const VOTE_PRICE = 10;
+export const VOTE_PRICE = 100;
 
 // Vote price display string
 export const VOTE_PRICE_DISPLAY = `${VOTE_PRICE} XAF`;
