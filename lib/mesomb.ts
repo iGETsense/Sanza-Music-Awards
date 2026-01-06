@@ -7,6 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { PaymentOperation } from '@hachther/mesomb';
+import crypto from 'crypto';
 
 // Initialize Mesomb client
 export function getMesombClient() {
