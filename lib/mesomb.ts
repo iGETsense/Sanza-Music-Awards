@@ -52,15 +52,13 @@ function generateSignature(
         .update(canonicalRequest)
         .digest('hex');
 
-    // Build SignedHeaders dynamically
-    // Always include host, date, nonce
-    const headers = ['host', 'x-mesomb-date', 'x-mesomb-nonce'];
+    // Explicitly define SignedHeaders to ensure exact match
+    let signedHeaders = 'host;x-mesomb-date;x-mesomb-nonce';
     if (contentType) {
-        headers.push('content-type');
+        signedHeaders = 'content-type;host;x-mesomb-date;x-mesomb-nonce';
     }
-    headers.sort(); // Ensure consistent order (c, h, x...)
 
-    return `HMAC-SHA1 Credential=${accessKey}, SignedHeaders=${headers.join(';')}, Signature=${signature}`;
+    return `HMAC-SHA1 Credential=${accessKey}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 }
 
 // Helper: Generic MeSomb Request
@@ -83,10 +81,19 @@ async function mesombRequest(
 
     const date = new Date().toISOString();
     const nonce = crypto.randomBytes(16).toString('hex');
-    const bodyString = body ? JSON.stringify(body) : '{}';
 
-    // Determine content type
-    const contentType = method !== 'GET' ? 'application/json' : undefined;
+    // Determine content type and body
+    let bodyString = '';
+    let contentType: string | undefined = undefined;
+
+    if (method !== 'GET') {
+        contentType = 'application/json';
+        bodyString = body ? JSON.stringify(body) : '{}';
+    } else {
+        // For GET, standard is empty body.
+        // NBDance used '{}' but sending body in GET is risky (502s).
+        bodyString = '';
+    }
 
     const signature = generateSignature(
         method,
@@ -104,8 +111,9 @@ async function mesombRequest(
     console.log(`[MeSomb] Direct Request: ${method} ${url}`, {
         nonce,
         date,
-        hasBody: !!body,
-        contentType
+        hasBody: !!bodyString,
+        contentType,
+        authHeaderLength: signature.length
     });
 
     const headers: Record<string, string> = {
