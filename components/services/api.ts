@@ -94,6 +94,12 @@ export const api = {
         },
         getTopNominees: (limit = 10) => apiRequest(`/admin/top-nominees?limit=${limit}`, { withAuth: true }),
         getRecentActivity: (limit = 20) => apiRequest(`/admin/recent-activity?limit=${limit}`, { withAuth: true }),
+        getBalance: () => apiRequest('/admin/balance', { withAuth: true }),
+        withdraw: (data: { amount: number; service: string; receiver: string }) => apiRequest('/admin/withdraw', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            withAuth: true,
+        }),
     },
 };
 

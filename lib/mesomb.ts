@@ -155,3 +155,86 @@ export async function checkPaymentStatus(reference: string): Promise<PaymentResu
         return { success: false, status: 'PENDING' };
     }
 }
+
+export async function makeWithdrawal(params: { amount: number, service: 'MTN' | 'ORANGE', receiver: string, nonce: string }): Promise<PaymentResult> {
+    try {
+        const payment = getMesombClient();
+        console.log('[MeSomb] Initiating withdrawal:', {
+            amount: params.amount,
+            service: params.service,
+            receiver: '***',
+            nonce: params.nonce
+        });
+
+        const response = await payment.makeDeposit({
+            amount: params.amount,
+            service: params.service as any,
+            receiver: params.receiver,
+            nonce: params.nonce,
+            country: 'CM',
+            currency: 'XAF',
+        });
+
+        console.log('[MeSomb] Withdrawal Raw Response:', JSON.stringify(response, null, 2));
+
+        const isOpSuccess = typeof response.isOperationSuccess === 'function' ? response.isOperationSuccess() : (response as any).success;
+
+        if (!isOpSuccess) {
+            return {
+                success: false,
+                status: 'FAILED',
+                error: response.message || 'Withdrawal operation failed',
+            };
+        }
+
+        return {
+            success: true,
+            status: 'SUCCESS',
+            reference: response.reference || response.transaction?.pk,
+            message: 'Withdrawal completed successfully.',
+        };
+    } catch (error: any) {
+        console.error('[MeSomb] Withdrawal Detail Error:', error);
+        return {
+            success: false,
+            status: 'FAILED',
+            error: error.message || 'Withdrawal failed',
+        };
+    }
+}
+
+export async function getAccountBalance(): Promise<{ success: boolean; balance?: number; balances?: any[]; error?: string }> {
+    try {
+        const payment = getMesombClient();
+        const application = await payment.getStatus();
+
+        console.log('[MeSomb] App Status Response:', JSON.stringify(application, null, 2));
+
+        const rawBalances = (application as any).balances || [];
+
+        const findBalance = (provider: string) => {
+            const found = rawBalances.find((b: any) => b.provider === provider && b.country === 'CM');
+            return found ? found.value : 0;
+        };
+
+        const mtnBalance = findBalance('MTN');
+        const orangeBalance = findBalance('ORANGE');
+
+        return {
+            success: true,
+            balance: mtnBalance + orangeBalance,
+            balances: [
+                { service: 'MTN', value: mtnBalance, country: 'CM' },
+                { service: 'ORANGE', value: orangeBalance, country: 'CM' }
+            ]
+        };
+    } catch (error: any) {
+        console.error('[MeSomb] Balance fetch error:', error);
+        return {
+            success: false,
+            error: error.message,
+            balance: 0,
+            balances: []
+        };
+    }
+}

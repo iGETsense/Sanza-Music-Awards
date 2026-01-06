@@ -15,7 +15,9 @@ import {
     XCircle,
     AlertCircle,
     ArrowRight,
-    Lock
+    Lock,
+    Wallet,
+    ArrowDownCircle
 } from 'lucide-react';
 import SanzaTrophy from '@/components/ui/SanzaTrophy';
 import Link from 'next/link';
@@ -41,6 +43,12 @@ const AdminPage = () => {
     const [transactions, setTransactions] = useState<any[]>([]);
     const [topNominees, setTopNominees] = useState<any[]>([]);
     const [statusFilter, setStatusFilter] = useState('all');
+    const [walletBalance, setWalletBalance] = useState<any>(null);
+    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+    const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [withdrawPhone, setWithdrawPhone] = useState('');
+    const [withdrawService, setWithdrawService] = useState<'MTN' | 'ORANGE'>('MTN');
+    const [isWithdrawing, setIsWithdrawing] = useState(false);
 
     // Guide Book State
     const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -82,14 +90,16 @@ const AdminPage = () => {
 
     const fetchDashboardData = useCallback(async () => {
         try {
-            const [statsData, txData, topData] = await Promise.all([
+            const [statsData, txData, topData, balanceData] = await Promise.all([
                 (api as any).admin.getStats(),
                 (api as any).admin.getTransactions({ limit: 50 }),
                 (api as any).admin.getTopNominees(5),
+                (api as any).admin.getBalance(),
             ]);
             setStats(statsData);
             setTransactions(txData.transactions || []);
             setTopNominees(topData || []);
+            setWalletBalance(balanceData);
         } catch (err) {
             console.error('Failed to fetch dashboard data:', err);
             // Fall back to local data
@@ -150,6 +160,33 @@ const AdminPage = () => {
         setIsAuthenticated(false);
         setStats(null);
         setTransactions([]);
+        setWalletBalance(null);
+    };
+
+    const handleWithdraw = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!withdrawAmount || !withdrawPhone) return;
+
+        setIsWithdrawing(true);
+        try {
+            const result = await (api as any).admin.withdraw({
+                amount: parseInt(withdrawAmount),
+                service: withdrawService,
+                receiver: withdrawPhone
+            });
+
+            if (result.success) {
+                alert('Retrait réussi !');
+                setIsWithdrawModalOpen(false);
+                setWithdrawAmount('');
+                setWithdrawPhone('');
+                fetchDashboardData();
+            }
+        } catch (err: any) {
+            alert(err.message || 'Échec du retrait');
+        } finally {
+            setIsWithdrawing(false);
+        }
     };
 
     const formatVotes = (votes: any) => {
@@ -296,7 +333,7 @@ const AdminPage = () => {
 
             <div className="p-6 space-y-8 relative z-10 max-w-7xl mx-auto">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4" id="stats-grid">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4" id="stats-grid">
                     <Card className="p-6 border-none bg-[#1a1a1a] rounded-[2rem] relative overflow-hidden group">
                         <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
                             <Activity size={100} />
@@ -305,6 +342,29 @@ const AdminPage = () => {
                         <h2 className="text-3xl font-black tracking-tighter">
                             {stats ? formatVotes(stats.totalVotes) : getTotalVotes()}
                         </h2>
+                    </Card>
+
+                    {/* Live Wallet Balance */}
+                    <Card className="p-6 border-none bg-gradient-to-br from-[#FDB931] to-[#D49E24] rounded-[2rem] relative overflow-hidden group shadow-[0_10px_40px_-10px_rgba(253,185,49,0.5)]">
+                        <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity text-black">
+                            <Wallet size={120} />
+                        </div>
+                        <div className="relative z-10 flex flex-col h-full justify-between">
+                            <div>
+                                <p className="text-[10px] text-black/60 font-black uppercase tracking-widest mb-1">Portefeuille MeSomb</p>
+                                <h2 className="text-3xl font-black tracking-tighter text-black flex items-baseline gap-1">
+                                    {walletBalance ? walletBalance.balance.toLocaleString() : '---'}
+                                    <span className="text-xs">XAF</span>
+                                </h2>
+                            </div>
+                            <Button
+                                className="mt-4 bg-black text-[#FDB931] border-none rounded-xl py-2 px-4 font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 w-full hover:bg-black/90"
+                                onClick={() => setIsWithdrawModalOpen(true)}
+                            >
+                                <ArrowDownCircle size={14} />
+                                Retirer des Fonds
+                            </Button>
+                        </div>
                     </Card>
                     <Card className="p-6 border-none bg-[#1a1a1a] rounded-[2rem] relative overflow-hidden group">
                         <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -482,6 +542,92 @@ const AdminPage = () => {
                 </div>
             </div>
             <AdminGuideBook isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
+
+            {/* Withdrawal Modal */}
+            {isWithdrawModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        onClick={() => setIsWithdrawModalOpen(false)}
+                    />
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="relative w-full max-w-md bg-[#1a1a1a] border border-white/5 rounded-[2.5rem] p-8 shadow-2xl"
+                    >
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20 mx-auto mb-4">
+                                <ArrowDownCircle className="text-secondary" size={32} />
+                            </div>
+                            <h2 className="text-2xl font-black tracking-tight mb-2">Retrait de Fonds</h2>
+                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Transférez vos revenus vers Mobile Money</p>
+                        </div>
+
+                        <form onSubmit={handleWithdraw} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setWithdrawService('MTN')}
+                                    className={`py-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${withdrawService === 'MTN' ? 'bg-secondary/20 border-secondary text-secondary' : 'bg-white/5 border-white/10 text-gray-500'}`}
+                                >
+                                    <span className="font-black text-xs uppercase tracking-widest">MTN MOMO</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setWithdrawService('ORANGE')}
+                                    className={`py-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${withdrawService === 'ORANGE' ? 'bg-secondary/20 border-secondary text-secondary' : 'bg-white/5 border-white/10 text-gray-500'}`}
+                                >
+                                    <span className="font-black text-xs uppercase tracking-widest">Orange Money</span>
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest ml-4 mb-2 block">Numéro de téléphone</label>
+                                    <input
+                                        type="tel"
+                                        placeholder="6XXXXXXXX"
+                                        value={withdrawPhone}
+                                        onChange={(e) => setWithdrawPhone(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-secondary transition-colors font-bold text-sm"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest ml-4 mb-2 block">Montant (XAF)</label>
+                                    <input
+                                        type="number"
+                                        placeholder="Ex: 5000"
+                                        value={withdrawAmount}
+                                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-secondary transition-colors font-bold text-sm"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-4">
+                                <Button
+                                    type="submit"
+                                    className="w-full py-4 rounded-2xl font-black uppercase tracking-widest"
+                                    disabled={isWithdrawing || !withdrawAmount || !withdrawPhone}
+                                >
+                                    {isWithdrawing ? 'Traitement...' : 'Confirmer le Retrait'}
+                                </Button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsWithdrawModalOpen(false)}
+                                    className="w-full mt-2 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+                                >
+                                    Annuler
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 };
