@@ -7,6 +7,67 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { PaymentOperation } from '@hachther/mesomb';
+import crypto from 'crypto';
+
+// MeSomb API constants
+const MESOMB_API_BASE = 'https://mesomb.hachther.com/api/v1.1';
+
+/**
+ * Generic Direct API request handler for MeSomb
+ * Manually handles signing to bypass SDK issues in serverless environments
+ */
+async function mesombRequestDirect(endpoint: string, method: string, body: any = null): Promise<any> {
+    const applicationKey = process.env.MESOMB_APPLICATION_KEY;
+    const accessKey = process.env.MESOMB_ACCESS_KEY;
+    const secretKey = process.env.MESOMB_SECRET_KEY;
+
+    if (!applicationKey || !accessKey || !secretKey) {
+        throw new Error('MeSomb credentials missing');
+    }
+
+    const date = new Date().toISOString();
+    const nonce = crypto.randomBytes(16).toString('hex');
+    const bodyString = body ? JSON.stringify(body) : '';
+
+    const canonicalRequest = [method, endpoint, date, nonce, bodyString].join('\n');
+    const signature = crypto.createHmac('sha1', secretKey).update(canonicalRequest).digest('hex');
+    const authorization = `HMAC-SHA1 Credential=${accessKey}, SignedHeaders=content-type;host;x-mesomb-date;x-mesomb-nonce, Signature=${signature}`;
+
+    const url = `${MESOMB_API_BASE}${endpoint}`;
+
+    console.log(`[MeSomb] Direct Request: ${method} ${url}`);
+
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-MeSomb-Application': applicationKey,
+        'X-MeSomb-Date': date,
+        'X-MeSomb-Nonce': nonce,
+        'Authorization': authorization,
+    };
+
+    try {
+        const response = await fetch(url, {
+            method,
+            headers,
+            body: method !== 'GET' ? bodyString : undefined,
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[MeSomb] Direct API Error Response:', {
+                status: response.status,
+                text: errorText,
+                url
+            });
+            throw new Error(`MeSomb Direct API error: ${response.status} ${errorText}`);
+        }
+
+        return await response.json();
+    } catch (error: any) {
+        console.error('[MeSomb] Direct Request Exception:', error.message);
+        throw error;
+    }
+}
 
 // Initialize Mesomb client
 export function getMesombClient() {
@@ -60,24 +121,22 @@ export interface PaymentResult {
 
 export async function collectPayment(params: CollectPaymentParams): Promise<PaymentResult> {
     try {
-        const payment = getMesombClient();
-
-        console.log('[MeSomb] Request details:', {
+        console.log('[MeSomb] Initiating collection (Direct):', {
             amount: params.amount,
             service: params.service,
             payer: '***',
             nonce: params.nonce
         });
 
-        const response = await payment.makeCollect({
+        const body = {
             amount: params.amount,
-            service: params.service as any,
+            service: params.service,
             payer: params.payer,
             nonce: params.nonce,
             country: 'CM',
             currency: 'XAF',
             fees: true,
-            mode: 'asynchronous', // Essential for Next.js to avoid blocking
+            mode: 'asynchronous',
             customer: {
                 email: 'vote@sanzamusicaward.com',
                 first_name: 'Voter',
@@ -94,36 +153,30 @@ export async function collectPayment(params: CollectPaymentParams): Promise<Paym
                     amount: params.amount,
                 },
             ],
-        });
+        };
 
-        console.log('[MeSomb] Raw SDK Response:', JSON.stringify(response, null, 2));
+        const result = await mesombRequestDirect('/payment/collect/', 'POST', body);
+        console.log('[MeSomb] Collection Response:', JSON.stringify(result, null, 2));
 
-        const isOpSuccess = typeof response.isOperationSuccess === 'function' ? response.isOperationSuccess() : (response as any).success;
+        // SDK expected isOperationSuccess, but direct API returns simple success or result.status
+        const isOpSuccess = result.success || result.status === 'SUCCESS' || result.status === 'PENDING';
+
         if (!isOpSuccess) {
             return {
                 success: false,
                 status: 'FAILED',
-                error: response.message || 'Payment operation failed',
-            };
-        }
-
-        const isTxSuccess = typeof response.isTransactionSuccess === 'function' ? response.isTransactionSuccess() : ((response as any).status === 'SUCCESS' || (response as any).status === 'PENDING');
-        if (!isTxSuccess) {
-            return {
-                success: false,
-                status: 'FAILED',
-                error: response.message || 'Transaction failed',
+                error: result.message || 'Payment operation failed',
             };
         }
 
         return {
             success: true,
             status: 'PENDING',
-            reference: response.reference || response.transaction?.pk,
+            reference: result.reference || result.transaction?.pk,
             message: 'Payment initiated. Please confirm on your phone.',
         };
     } catch (error: any) {
-        console.error('[MeSomb] SDK Error Detail:', error);
+        console.error('[MeSomb] collectPayment Error:', error.message);
         return {
             success: false,
             status: 'FAILED',
@@ -134,14 +187,13 @@ export async function collectPayment(params: CollectPaymentParams): Promise<Paym
 
 export async function checkPaymentStatus(reference: string): Promise<PaymentResult> {
     try {
-        const payment = getMesombClient();
-        const transactions = await payment.getTransactions([reference], 'MESOMB');
+        const result = await mesombRequestDirect(`/payment/transactions/?ids=${reference}&source=MESOMB`, 'GET');
 
-        if (!transactions || transactions.length === 0) {
+        if (!result.transactions || result.transactions.length === 0) {
             return { success: false, status: 'PENDING' };
         }
 
-        const transaction = transactions[0];
+        const transaction = result.transactions[0];
         const isSuccess = transaction.status === 'SUCCESS';
 
         return {
@@ -158,43 +210,41 @@ export async function checkPaymentStatus(reference: string): Promise<PaymentResu
 
 export async function makeWithdrawal(params: { amount: number, service: 'MTN' | 'ORANGE', receiver: string, nonce: string }): Promise<PaymentResult> {
     try {
-        const payment = getMesombClient();
-        console.log('[MeSomb] Initiating withdrawal:', {
+        console.log('[MeSomb] Initiating withdrawal (Direct):', {
             amount: params.amount,
             service: params.service,
             receiver: '***',
             nonce: params.nonce
         });
 
-        const response = await payment.makeDeposit({
+        const body = {
             amount: params.amount,
-            service: params.service as any,
+            service: params.service,
             receiver: params.receiver,
             nonce: params.nonce,
             country: 'CM',
             currency: 'XAF',
-        });
+        };
 
-        console.log('[MeSomb] Withdrawal Raw Response:', JSON.stringify(response, null, 2));
+        const result = await mesombRequestDirect('/payment/deposit/', 'POST', body);
+        console.log('[MeSomb] Withdrawal Response:', JSON.stringify(result, null, 2));
 
-        const isOpSuccess = typeof response.isOperationSuccess === 'function' ? response.isOperationSuccess() : (response as any).success;
-
-        if (!isOpSuccess) {
+        if (!result.success) {
             return {
                 success: false,
                 status: 'FAILED',
-                error: response.message || 'Withdrawal operation failed',
+                error: result.message || 'Withdrawal operation failed',
             };
         }
 
         return {
             success: true,
             status: 'SUCCESS',
-            reference: response.reference || response.transaction?.pk,
+            reference: result.reference || result.transaction?.pk,
             message: 'Withdrawal completed successfully.',
         };
     } catch (error: any) {
-        console.error('[MeSomb] Withdrawal Detail Error:', error);
+        console.error('[MeSomb] makeWithdrawal Error:', error.message);
         return {
             success: false,
             status: 'FAILED',
@@ -205,13 +255,11 @@ export async function makeWithdrawal(params: { amount: number, service: 'MTN' | 
 
 export async function getAccountBalance(): Promise<{ success: boolean; balance?: number; balances?: any[]; error?: string }> {
     try {
-        const payment = getMesombClient();
-        const application = await payment.getStatus();
+        const application = await mesombRequestDirect('/payment/status/', 'GET');
 
         console.log('[MeSomb] App Status Response:', JSON.stringify(application, null, 2));
 
         const rawBalances = (application as any).balances || [];
-
         const findBalance = (provider: string) => {
             const found = rawBalances.find((b: any) => b.provider === provider && b.country === 'CM');
             return found ? found.value : 0;
