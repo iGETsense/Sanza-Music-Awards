@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         console.log(`Manual Verify for ${transactionId}:`, statusResult);
 
         // 3. Process if successful
-        if (statusResult.success && (statusResult.status === 'SUCCESS' || statusResult.status === 'success' || statusResult.status === 'completed')) {
+        if (statusResult.status === 'SUCCESS') {
             const processResult = await processSuccessfulPayment({
                 id: transactionId,
                 nomineeId: transaction.nomineeId || transaction.nominee_id,
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 4. Update if failed on MeSomb
-        if (statusResult.success && (statusResult.status === 'FAILED' || statusResult.status === 'failed')) {
+        if (statusResult.status === 'FAILED') {
             await adminDb.ref(`transactions/${transactionId}`).update({
                 status: 'failed',
                 error: statusResult.message || 'Échec confirmé par MeSomb',
