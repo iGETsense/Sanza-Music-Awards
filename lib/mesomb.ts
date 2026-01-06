@@ -11,6 +11,7 @@ import crypto from 'crypto';
 
 // MeSomb API constants
 const MESOMB_API_BASE = 'https://mesomb.hachther.com/api/v1.1';
+const MESOMB_HOST = 'mesomb.hachther.com';
 
 /**
  * Generic Direct API request handler for MeSomb
@@ -71,9 +72,13 @@ async function mesombRequestDirect(endpoint: string, method: string, body: any =
 
 // Initialize Mesomb client
 export function getMesombClient() {
-    const applicationKey = process.env.MESOMB_APPLICATION_KEY;
-    const accessKey = process.env.MESOMB_ACCESS_KEY;
-    const secretKey = process.env.MESOMB_SECRET_KEY;
+    const rawAppKey = process.env.MESOMB_APPLICATION_KEY || '';
+    const rawAccessKey = process.env.MESOMB_ACCESS_KEY || '';
+    const rawSecretKey = process.env.MESOMB_SECRET_KEY || '';
+
+    const applicationKey = rawAppKey.trim();
+    const accessKey = rawAccessKey.trim();
+    const secretKey = rawSecretKey.trim();
 
     // Enhanced debug logging (safe)
     console.log('[MeSomb] Initialization check:', {
@@ -255,7 +260,9 @@ export async function makeWithdrawal(params: { amount: number, service: 'MTN' | 
 
 export async function getAccountBalance(): Promise<{ success: boolean; balance?: number; balances?: any[]; error?: string }> {
     try {
-        const application = await mesombRequestDirect('/payment/status/', 'GET');
+        // Use the official SDK which handles signature generation correctly
+        const payment = getMesombClient();
+        const application = await payment.getStatus();
 
         console.log('[MeSomb] App Status Response:', JSON.stringify(application, null, 2));
 
