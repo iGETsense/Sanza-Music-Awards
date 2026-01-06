@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { useVotes } from '@/components/context/VoteContext';
 import { useLayout } from '@/components/context/LayoutContext';
 import api from '@/components/services/api';
+import PaymentStatusOverlay from '@/components/ui/PaymentStatusOverlay';
 
 interface VoteModalProps {
     isOpen: boolean;
@@ -27,6 +28,9 @@ const VoteModal = ({ isOpen, onClose, nominee }: VoteModalProps) => {
     const [localPolling, setLocalPolling] = useState(false);
     const [pollingMessage, setPollingMessage] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'polling' | 'success' | 'failed'>('idle');
+    const [statusMessage, setStatusMessage] = useState('');
+
     const router = useRouter();
 
     const { incrementVote, processVote, useBackend, refetch, categories, language } = useVotes();
@@ -117,6 +121,7 @@ const VoteModal = ({ isOpen, onClose, nominee }: VoteModalProps) => {
         setIsLoading(false);
         setIsPolling(false);
         setLocalPolling(false);
+        setPaymentStatus('idle'); // Reset overlay
         onErrorReset();
         onClose();
     };
@@ -125,6 +130,7 @@ const VoteModal = ({ isOpen, onClose, nominee }: VoteModalProps) => {
 
     const processPayment = async (method: string, phone: string, amount: number) => {
         setIsLoading(true);
+        setPaymentStatus('processing');
         try {
             await new Promise(resolve => setTimeout(resolve, 2000));
             return { success: true };
@@ -138,18 +144,24 @@ const VoteModal = ({ isOpen, onClose, nominee }: VoteModalProps) => {
 
     const handleVoteSubmit = async () => {
         setIsLoading(true);
+        setPaymentStatus('processing');
         setError(null);
         setPollingMessage('');
+
         try {
             if (useBackend && processVote) {
                 const result = await processVote(nominee.id, currentVoteCount, phoneNumber, paymentMethod);
 
                 if (result.success) {
                     setIsLoading(false);
+                    // Instead of just setting isPolling, we set paymentStatus to polling
                     setIsPolling(true);
+                    setPaymentStatus('polling');
+
                     if (result.status === 'pending') {
                         setLocalPolling(true);
                         setPollingMessage(result.message || t.confirmPhone);
+                        setStatusMessage(result.message || t.confirmPhone); // Update overlay message
 
                         const pollInterval = setInterval(async () => {
                             try {
@@ -158,44 +170,68 @@ const VoteModal = ({ isOpen, onClose, nominee }: VoteModalProps) => {
                                     clearInterval(pollInterval);
                                     setIsPolling(false);
                                     setLocalPolling(false);
+                                    setPaymentStatus('success'); // Show success overlay
+
                                     if (refetch) await refetch();
-                                    router.push(`/vote-success?nomineeId=${nominee.id}&count=${currentVoteCount}`);
+
+                                    // Delay redirect to show success animation
+                                    setTimeout(() => {
+                                        router.push(`/vote-success?nomineeId=${nominee.id}&count=${currentVoteCount}`);
+                                    }, 2000);
+
                                 } else if (statusResult.status === 'failed') {
                                     clearInterval(pollInterval);
                                     setIsPolling(false);
                                     setLocalPolling(false);
                                     setError(statusResult.error || t.paymentFailed);
+                                    setPaymentStatus('failed'); // Show failed overlay
+                                    setStatusMessage(statusResult.error || t.paymentFailed);
                                 }
                             } catch (e) {
                                 console.error('Polling error:', e);
                             }
                         }, 3000);
 
+                        // Timeout
                         setTimeout(() => {
                             clearInterval(pollInterval);
                             setLocalPolling(false);
                             setIsPolling(false);
+                            // If still polling after timeout, maybe show manual check needed or timeout error
+                            // For now, let's just close or show error if strictly needed
                         }, 120000);
                     } else {
-                        router.push(`/vote-success?nomineeId=${nominee.id}&count=${currentVoteCount}`);
+                        setPaymentStatus('success');
+                        setTimeout(() => {
+                            router.push(`/vote-success?nomineeId=${nominee.id}&count=${currentVoteCount}`);
+                        }, 1500);
                     }
                 } else {
                     setError(result.error || result.message || t.paymentFailed);
+                    setStatusMessage(result.error || result.message || t.paymentFailed);
+                    setPaymentStatus('failed');
                     setIsLoading(false);
                 }
             } else {
+                // Mock flow
                 const result = await processPayment(paymentMethod, phoneNumber, totalPrice);
                 if (result.success) {
                     incrementVote(nominee.id, currentVoteCount, totalPrice, paymentMethod);
-                    router.push(`/vote-success?nomineeId=${nominee.id}&count=${currentVoteCount}`);
+                    setPaymentStatus('success');
+                    setTimeout(() => {
+                        router.push(`/vote-success?nomineeId=${nominee.id}&count=${currentVoteCount}`);
+                    }, 1500);
                 } else {
                     setError(t.paymentFailed);
+                    setPaymentStatus('failed');
                     setIsLoading(false);
                 }
             }
         } catch (err: any) {
             console.error('Payment error:', err);
             setError(err.message || t.transactionError);
+            setStatusMessage(err.message || t.transactionError);
+            setPaymentStatus('failed');
             setIsLoading(false);
         }
     };
@@ -220,6 +256,13 @@ const VoteModal = ({ isOpen, onClose, nominee }: VoteModalProps) => {
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
                         className="relative w-full max-w-lg bg-[#1a1a1a] rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/5 max-h-[90vh] overflow-y-auto scrollbar-hide text-white"
                     >
+                        {/* Status Overlay */}
+                        <PaymentStatusOverlay
+                            status={paymentStatus}
+                            message={statusMessage}
+                            onClose={() => setPaymentStatus('idle')}
+                        />
+
                         {/* Close Button */}
                         <button
                             onClick={handleClose}
@@ -356,19 +399,6 @@ const VoteModal = ({ isOpen, onClose, nominee }: VoteModalProps) => {
                             >
                                 {isLoading ? t.processing : (localPolling || isPolling) ? t.polling : `${t.voteNow} • ${totalPrice} XAF`}
                             </Button>
-
-                            {(isPolling || localPolling) && pollingMessage && (
-                                <div className="text-center mb-4 animate-pulse">
-                                    <p className="text-xs text-yellow-500 uppercase tracking-wider mb-1">{pollingMessage}</p>
-                                    <p className="text-[10px] text-white/50 font-mono">
-                                        Traitement {paymentMethod} • {phoneNumber} • {totalPrice} XAF
-                                    </p>
-                                </div>
-                            )}
-
-                            {error && (
-                                <p className="text-center text-xs text-red-500 font-bold mb-4 uppercase tracking-wider">{error}</p>
-                            )}
 
                             <div className="flex items-center justify-center gap-2 text-gray-500 text-[10px] font-bold uppercase tracking-widest">
                                 <Lock size={12} /> {t.secure}

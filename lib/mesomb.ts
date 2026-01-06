@@ -294,11 +294,14 @@ export async function checkPaymentStatus(reference: string): Promise<PaymentResu
         // According to NBDanceAward and docs
         const result = await mesombRequest(`/payment/transactions/?ids=${reference}&source=MESOMB`, 'GET');
 
-        if (!result.transactions || result.transactions.length === 0) {
+        // API returns an Array of transactions
+        const transactions = Array.isArray(result) ? result : (result.transactions || []);
+
+        if (transactions.length === 0) {
             return { success: false, status: 'PENDING' };
         }
 
-        const transaction = result.transactions[0];
+        const transaction = transactions[0];
         const isSuccess = transaction.status === 'SUCCESS';
         const isFailed = transaction.status === 'FAILED';
 
