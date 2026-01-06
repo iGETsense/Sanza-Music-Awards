@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
                 transactionId,
                 reference: paymentResult.reference,
                 amount,
-                message: 'Payment initiated. Please confirm on your phone.',
+                message: 'Merci de valider. Veuillez patienter, nous finissons le paiement.',
             });
 
         } catch (paymentError: any) {

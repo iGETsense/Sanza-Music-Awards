@@ -463,7 +463,10 @@ const AdminPage = () => {
                                         <div>
                                             <h4 className="text-sm font-bold">{tx.nominee_name || 'Unknown'}</h4>
                                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                                                {new Date(tx.created_at || tx.timestamp || tx.createdAt || Date.now()).toLocaleTimeString()} • {tx.payer || tx.phoneNumber || 'Unknown'}
+                                                {(() => {
+                                                    const d = new Date(tx.created_at || tx.timestamp || tx.createdAt || Date.now());
+                                                    return isNaN(d.getTime()) ? new Date().toLocaleTimeString() : d.toLocaleTimeString();
+                                                })()} • {tx.payer || tx.phoneNumber || 'Unknown'} (Votes: {tx.voteCount || tx.votes || tx.votes_count})
                                             </p>
                                             {tx.status === 'failed' && (
                                                 <p className="text-[9px] text-red-500 font-bold mt-1 max-w-[200px] truncate">

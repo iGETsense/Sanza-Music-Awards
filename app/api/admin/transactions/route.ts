@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         }
 
         const snapshot = await adminDb.ref('transactions')
-            .orderByChild('created_at')
+            .orderByChild('createdAt')
             .limitToLast(limit)
             .once('value');
 
