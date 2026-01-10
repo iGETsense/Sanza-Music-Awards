@@ -59,7 +59,7 @@ const Results = () => {
 
     const displayedNominees = selectedCategoryId === 'global'
         ? globalRankings
-        : getCategoryRankings(parseInt(selectedCategoryId));
+        : getCategoryRankings(selectedCategoryId);
 
     const getGlobalRank = (nomineeId: string | number) => {
         return globalRankings.findIndex((n: any) => n.id === nomineeId) + 1;
@@ -132,7 +132,7 @@ const Results = () => {
                     <div className="flex flex-col gap-4 mb-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
-                                {selectedCategoryId === 'global' ? t.general : getCategoryTitle(parseInt(selectedCategoryId))}
+                                {selectedCategoryId === 'global' ? t.general : getCategoryTitle(selectedCategoryId)}
                             </h3>
                             <span className="text-[10px] text-secondary font-bold uppercase tracking-widest flex items-center gap-1">
                                 <TrendingUp size={12} /> {t.live}

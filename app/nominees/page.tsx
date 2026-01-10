@@ -16,7 +16,7 @@ const NomineesContent = () => {
     const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
     const [selectedNominee, setSelectedNominee] = useState<any>(null);
     const searchParams = useSearchParams();
-    const categoryId = parseInt(searchParams.get('categoryId') || '1');
+    const categoryId = searchParams.get('categoryId') || 'cat_01';
 
     const t = {
         FR: {
@@ -73,13 +73,13 @@ const NomineesContent = () => {
         return <div className="min-h-screen bg-black flex items-center justify-center text-white">{t.loading}</div>;
     }
 
-    const category = categories.find((c: any) => c.id === categoryId) || categories[0];
+    const category = categories.find((c: any) => String(c.id) === String(categoryId)) || categories[0];
 
     if (!category) {
         return <div className="min-h-screen bg-black flex items-center justify-center text-white">{t.noCategory}</div>;
     }
 
-    const filteredNominees = allNominees.filter((n: any) => n.categoryId === categoryId);
+    const filteredNominees = allNominees.filter((n: any) => String(n.categoryId) === String(categoryId));
 
     const handleVoteClick = (nominee: any) => {
         setSelectedNominee(nominee);
