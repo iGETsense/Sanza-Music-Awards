@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import api from '@/components/services/api';
+import { CATEGORY_IMAGE_MAP } from '@/components/constants/categoryImages';
+import localData from '@/sanza_db_export.json';
 
 interface Nominee {
     id: string | number;
@@ -75,10 +77,21 @@ export const VoteProvider = ({ children }: { children: ReactNode }) => {
             setIsLoading(true);
             setError(null);
 
-            const [categoriesData, nomineesData] = await Promise.all([
+            let [categoriesData, nomineesData] = await Promise.all([
                 (api as any).getCategories(),
                 (api as any).getNominees(),
             ]);
+
+            // Fallback to local data if API returns empty
+            if (!categoriesData || categoriesData.length === 0) {
+                console.log('⚠️ No categories from API, using fallback data');
+                categoriesData = Object.entries(localData.categories).map(([id, val]) => ({ id, ...val }));
+            }
+
+            if (!nomineesData || nomineesData.length === 0) {
+                console.log('⚠️ No nominees from API, using fallback data');
+                nomineesData = Object.entries(localData.nominees).map(([id, val]) => ({ id, ...val }));
+            }
 
             const transformNominees = (data: any[]): Nominee[] => data.map(n => ({
                 id: n.id,
@@ -101,7 +114,7 @@ export const VoteProvider = ({ children }: { children: ReactNode }) => {
                 id: c.id,
                 title: c.title,
                 nominees: c.nominees_count,
-                image: c.image_url,
+                image: CATEGORY_IMAGE_MAP[c.id] || c.image_url,
                 featured: c.featured,
             }));
 
@@ -111,10 +124,44 @@ export const VoteProvider = ({ children }: { children: ReactNode }) => {
             console.log('✅ Connected to backend API');
         } catch (err: any) {
             console.error('❌ Backend request failed:', err.message);
-            setError('Failed to load data from server. Please try again later.');
-            setUseBackend(false);
-            setCategories([]);
-            setNominees([]);
+
+            // Critical fallback if API completely fails
+            try {
+                const categoriesData = Object.entries(localData.categories).map(([id, val]) => ({ id, ...val }));
+                const nomineesData = Object.entries(localData.nominees).map(([id, val]) => ({ id, ...val }));
+
+                const transformNominees = (data: any[]): Nominee[] => data.map(n => ({
+                    id: n.id,
+                    categoryId: n.category_id,
+                    name: n.name,
+                    song: n.song,
+                    votes: n.votes_display || n.votes?.toString() || '0',
+                    image: n.image_url,
+                    tag: n.tag,
+                    description: n.description,
+                    bio: n.bio,
+                    genre: n.genre,
+                    country: n.country,
+                    rank: n.rank,
+                    listeners: n.listeners,
+                    hits: n.hits || [],
+                }));
+
+                const transformedCategories = categoriesData.map((c: any): Category => ({
+                    id: c.id,
+                    title: c.title,
+                    nominees: c.nominees_count,
+                    image: CATEGORY_IMAGE_MAP[c.id] || c.image_url,
+                    featured: c.featured,
+                }));
+
+                setCategories(transformedCategories);
+                setNominees(transformNominees(nomineesData));
+                setUseBackend(false);
+                setError('Mode hors-ligne : Utilisation des données locales.');
+            } catch (fallbackErr) {
+                setError('Failed to load data from server. Please try again later.');
+            }
         } finally {
             setIsLoading(false);
         }

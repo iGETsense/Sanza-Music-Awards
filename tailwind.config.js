@@ -19,7 +19,8 @@ export default {
                 '3xl': '1.5rem',
             },
             fontFamily: {
-                sans: ['Inter', 'sans-serif'],
+                sans: ['var(--font-inter)', 'Inter', 'sans-serif'],
+                serif: ['var(--font-playfair)', 'serif'],
             },
         },
     },

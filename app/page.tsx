@@ -107,7 +107,7 @@ const Landing = () => {
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.8 }}
-                                className="text-6xl xs:text-7xl md:text-9xl lg:text-[10rem] font-bold leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-[#FFD700] via-[#FDB931] to-[#C49102] drop-shadow-sm"
+                                className="text-6xl xs:text-7xl md:text-9xl lg:text-[10rem] font-serif font-bold leading-none text-transparent bg-clip-text bg-gradient-to-b from-[#FFD700] via-[#FDB931] to-[#C49102] drop-shadow-sm"
                             >
                                 Sanza
                             </motion.h1>
@@ -115,7 +115,7 @@ const Landing = () => {
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.8, delay: 0.2 }}
-                                className="text-lg xs:text-2xl md:text-4xl lg:text-5xl font-light text-[#FDB931] uppercase tracking-[0.2em] md:tracking-[0.4em] pl-1 md:pl-3"
+                                className="text-lg xs:text-2xl md:text-4xl lg:text-5xl font-sans font-light text-[#FDB931] tracking-[0.2em] md:tracking-[0.3em] pl-1 md:pl-3"
                             >
                                 Music Awards
                             </motion.h2>
@@ -134,7 +134,7 @@ const Landing = () => {
                             <div className="w-1 h-1 rounded-full bg-[#FDB931]" />
                             <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-[#FDB931]" />
                         </div>
-                        <p className="text-white/90 text-[10px] xs:text-xs md:text-sm tracking-[0.25em] md:tracking-[0.5em] uppercase font-light text-center px-4 max-w-[280px] xs:max-w-none leading-loose">
+                        <p className="text-white/90 text-[8px] sm:text-xs md:text-sm tracking-[0.2em] sm:tracking-[0.3em] md:tracking-[0.5em] uppercase font-light text-center px-4 whitespace-nowrap leading-loose">
                             {t.tagline}
                         </p>
 
@@ -150,10 +150,10 @@ const Landing = () => {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.7 }}
-                        className="flex flex-col items-center gap-6 w-full max-w-[300px] xs:max-w-md"
+                        className="flex flex-col items-center gap-6 w-full max-w-[350px] md:max-w-md"
                     >
                         <Link href="/categories" className="w-full md:w-auto">
-                            <div className="w-full md:w-auto px-20 xs:px-24 py-4 xs:py-4.5 bg-gradient-to-r from-[#DF9F28] via-[#FDB931] to-[#DF9F28] text-[#051040] font-black uppercase tracking-widest text-sm rounded-full shadow-[0_4px_30px_rgba(253,185,49,0.4)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center cursor-pointer">
+                            <div className="w-full md:w-auto px-10 sm:px-20 md:px-24 py-4 md:py-4.5 bg-gradient-to-r from-[#DF9F28] via-[#FDB931] to-[#DF9F28] text-[#051040] font-black uppercase tracking-widest text-sm rounded-full shadow-[0_4px_30px_rgba(253,185,49,0.4)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center cursor-pointer whitespace-nowrap">
                                 {t.cta}
                             </div>
                         </Link>

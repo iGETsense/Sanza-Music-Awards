@@ -374,7 +374,7 @@ const VoteModal = ({ isOpen, onClose, nominee }: VoteModalProps) => {
                             {/* Phone Input */}
                             <div className="mb-8">
                                 <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">+237</span>
+                                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">+237</span>
                                     <input
                                         type="tel"
                                         placeholder={t.phonePlaceholder}
@@ -394,7 +394,7 @@ const VoteModal = ({ isOpen, onClose, nominee }: VoteModalProps) => {
                             {/* Submit Button */}
                             <Button
                                 className="w-full py-4 text-sm font-bold rounded-2xl shadow-lg shadow-secondary/20 mb-4 flex items-center justify-center gap-2"
-                                disabled={isLoading || isPolling || localPolling}
+                                disabled={isLoading || isPolling || localPolling || !phoneNumber}
                                 onClick={handleVoteSubmit}
                             >
                                 {isLoading ? t.processing : (localPolling || isPolling) ? t.polling : `${t.voteNow} • ${totalPrice} XAF`}

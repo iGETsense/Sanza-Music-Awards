@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -15,6 +15,14 @@ const Categories = () => {
     const { categories, nominees, language, switchLanguage, isLoading } = useVotes();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [showAll, setShowAll] = useState(false);
+    const [shuffledCategories, setShuffledCategories] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (categories && categories.length > 0) {
+            const shuffled = [...categories].sort(() => Math.random() - 0.5);
+            setShuffledCategories(shuffled);
+        }
+    }, [categories]);
 
     const t = {
         FR: {
@@ -24,7 +32,6 @@ const Categories = () => {
             featured: "Catégorie Vedette",
             voteOpen: "VOTE OUVERT",
             voteNow: "Voter Maintenant",
-            finishIn: "FINIT DANS",
             browse: "Parcourir les catégories",
             noData: "Aucune catégorie trouvée. Veuillez initialiser la base de données."
         },
@@ -35,7 +42,6 @@ const Categories = () => {
             featured: "Featured Category",
             voteOpen: "OPEN VOTE",
             voteNow: "Vote Now",
-            finishIn: "ENDS IN",
             browse: "Browse Categories",
             noData: "No categories found. Please seed the database."
         }
@@ -47,16 +53,22 @@ const Categories = () => {
             featured: "Catégorie Vedette",
             voteOpen: "VOTE OUVERT",
             voteNow: "Voter Maintenant",
-            finishIn: "FINIT DANS",
             browse: "Parcourir les catégories",
             noData: "Aucune catégorie trouvée. Veuillez initialiser la base de données."
         }
     }.FR;
 
     const featuredCategory = useMemo(() => {
+        if (shuffledCategories.length > 0) return shuffledCategories[0];
         if (!categories || categories.length === 0) return null;
         return categories.find((c: any) => c.featured) || categories[0];
-    }, [categories]);
+    }, [shuffledCategories, categories]);
+
+    const otherCategories = useMemo(() => {
+        if (shuffledCategories.length > 0) return shuffledCategories.slice(1);
+        if (!categories || categories.length === 0) return [];
+        return categories.filter((c: any) => c.id !== (featuredCategory?.id));
+    }, [shuffledCategories, categories, featuredCategory]);
 
     const getIcon = (title: string) => {
         if (!title) return SanzaTrophy;
@@ -85,7 +97,6 @@ const Categories = () => {
         </div>;
     }
 
-    const otherCategories = categories.filter((c: any) => c.id !== featuredCategory.id);
     const displayedCategories = showAll ? otherCategories : otherCategories.slice(0, 4);
 
     return (
@@ -147,7 +158,7 @@ const Categories = () => {
                                     <h3 className="text-2xl font-bold">{featuredCategory.title}</h3>
                                     <p className="text-[10px] text-gray-300 uppercase tracking-widest">
                                         {t.featured} • {featuredCategory.nominees} <br />
-                                        <span className="text-secondary font-bold">{t.finishIn} 20H</span>
+                                        <span className="text-secondary font-bold">Sanza Music Awards 2026</span>
                                     </p>
                                 </div>
                             </div>

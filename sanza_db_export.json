@@ -3,13 +3,13 @@
         "cat_01": {
             "title": "Album of The Year",
             "nominees_count": "0 Nominees",
-            "image_url": "/images/categories/cat-album-of-the-year.png",
+            "image_url": "/images/categories_new/WhatsApp Image 2026-01-11 at 13.08.31.jpeg",
             "featured": true
         },
         "cat_02": {
             "title": "Song of The Year",
             "nominees_count": "0 Nominees",
-            "image_url": "/images/categories/cat-song-of-the-year.png",
+            "image_url": "/images/categories_new/WhatsApp Image 2026-01-11 at 13.08.29.jpeg",
             "featured": false
         },
         "cat_03": {

@@ -22,7 +22,7 @@ const NomineesContent = () => {
         FR: {
             voteFor: "Votez pour le",
             winner: "gagnant 2026.",
-            endsIn: "Le vote se termine dans 3 jours. Il vous reste 5 votes aujourd'hui.",
+            endsIn: "Soutenez vos artistes préférés en votant chaque jour.",
             tabs: {
                 All: "Tous",
                 Trending: "Tendances",
@@ -37,7 +37,7 @@ const NomineesContent = () => {
         EN: {
             voteFor: "Vote for the",
             winner: "2026 winner.",
-            endsIn: "Voting ends in 3 days. You have 5 votes left today.",
+            endsIn: "Support your favorite artists by voting every day.",
             tabs: {
                 All: "All",
                 Trending: "Trending",
@@ -53,7 +53,7 @@ const NomineesContent = () => {
         FR: {
             voteFor: "Votez pour le",
             winner: "gagnant 2026.",
-            endsIn: "Le vote se termine dans 3 jours. Il vous reste 5 votes aujourd'hui.",
+            endsIn: "Soutenez vos artistes préférés en votant chaque jour.",
             tabs: {
                 All: "Tous",
                 Trending: "Tendances",
