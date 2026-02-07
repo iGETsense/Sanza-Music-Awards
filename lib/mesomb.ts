@@ -56,8 +56,13 @@ function signRequest(
     body: any,
     credentials: { accessKey: string; secretKey: string }
 ): string {
-    const timestamp = date.getTime();
+    const timestamp = Math.floor(date.getTime() / 1000);
     const url = new URL(urlStr);
+
+    const YYYY = date.getUTCFullYear();
+    const MM = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const DD = String(date.getUTCDate()).padStart(2, '0');
+    const dateStr = `${YYYY}${MM}${DD}`;
 
     // 1. Headers
     const headers: Record<string, string> = {};
@@ -109,7 +114,7 @@ function signRequest(
     // Scope
     // SDK: date.getFullYear() + date.getMonth() + date.getDate() + '/' + service + '/mesomb_request'
     // Note: date.getMonth() is 0-indexed.
-    const scope = `${date.getFullYear()}${date.getMonth()}${date.getDate()}/${service}/mesomb_request`;
+    const scope = `${dateStr}/${service}/mesomb_request`;
 
     // String to Sign
     const stringToSign = [
@@ -172,7 +177,7 @@ async function mesombRequest(
     });
 
     const headers: Record<string, string> = {
-        'x-mesomb-date': String(date.getTime()),
+        'x-mesomb-date': String(Math.floor(date.getTime() / 1000)),
         'x-mesomb-nonce': nonce,
         'Authorization': signature,
         'X-MeSomb-Application': applicationKey,
