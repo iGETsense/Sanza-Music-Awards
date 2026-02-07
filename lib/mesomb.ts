@@ -114,7 +114,7 @@ function signRequest(
     // Scope
     // SDK: date.getFullYear() + date.getMonth() + date.getDate() + '/' + service + '/mesomb_request'
     // Note: date.getMonth() is 0-indexed.
-    const scope = `${dateStr}/${service}/mesomb_request`;
+    const scope = `${dateStr}/payment/mesomb_request`;
 
     // String to Sign
     const stringToSign = [
@@ -130,6 +130,7 @@ function signRequest(
         .update(stringToSign)
         .digest('hex');
 
+    console.log(`[MeSomb Debug] StringToSign:\n${stringToSign}`);
     return `${ALGORITHM} Credential=${credentials.accessKey}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 }
 
