@@ -35,14 +35,14 @@ function sha1(content: string): string {
 
 // Helper: Custom URL Parsing to match SDK 'url-parse' behavior roughly
 // SDK: protocol + '//' + host e.g. 'https://mesomb.hachther.com'
+// However, V4 signing typically uses just the host without protocol
 function getSdkHost(urlStr: string): string {
     try {
         const url = new URL(urlStr);
-        // SDK headers.host: parse.protocol + '//' + parse.host
-        // URL.protocol includes ':'
-        return `${url.protocol}//${url.host}`;
+        // Use just the host without protocol for V4 signing
+        return url.host;
     } catch (e) {
-        return 'https://mesomb.hachther.com';
+        return 'mesomb.hachther.com';
     }
 }
 
