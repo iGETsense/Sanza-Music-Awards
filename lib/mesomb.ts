@@ -56,7 +56,7 @@ function signRequest(
     body: any,
     credentials: { accessKey: string; secretKey: string }
 ): string {
-    const timestamp = Math.floor(date.getTime() / 1000);
+    const timestamp = date.getTime();
     const url = new URL(urlStr);
 
     const YYYY = date.getUTCFullYear();
@@ -110,6 +110,8 @@ function signRequest(
         signedHeaders,
         payloadHash
     ].join('\n');
+
+    console.log(`[MeSomb Debug] CanonicalRequest:\n${canonicalRequest}`);
 
     // Scope
     // SDK: date.getFullYear() + date.getMonth() + date.getDate() + '/' + service + '/mesomb_request'
@@ -178,7 +180,7 @@ async function mesombRequest(
     });
 
     const headers: Record<string, string> = {
-        'x-mesomb-date': String(Math.floor(date.getTime() / 1000)),
+        'x-mesomb-date': String(date.getTime()),
         'x-mesomb-nonce': nonce,
         'Authorization': signature,
         'X-MeSomb-Application': applicationKey,
